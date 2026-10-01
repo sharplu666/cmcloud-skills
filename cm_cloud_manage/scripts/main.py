@@ -79,6 +79,7 @@ from utils import write_cli_output_line
 def handle_upload(args):
     return run_upload(
         args.file_path,
+        args.target_dir,
         session=args.session,
     )
 

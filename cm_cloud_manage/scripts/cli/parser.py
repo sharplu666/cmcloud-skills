@@ -22,8 +22,7 @@ def build_parser() -> argparse.ArgumentParser:
   · stderr：下载进度等过程日志
 
 上传:
-  · upload <本地绝对路径> 上传到当前会话默认保存目录
-  · 需落到其它目录：先 upload，再 batch_move / batch_copy 到目标文件夹
+  · upload <本地绝对路径> [目标云盘目录] 上传到指定云盘目录（缺省为当前会话默认保存目录）
 
 mkdir：完整路径须以 /AI空间/MClaw空间 开头
 
@@ -39,10 +38,16 @@ mkdir：完整路径须以 /AI空间/MClaw空间 开头
 
     p = sub.add_parser(
         'upload',
-        help='把本地文件上传到云盘（写操作，须用户确认）',
-        description='上传到当前会话默认保存目录（/AI空间/MClaw空间/对话文件/<会话目录>）',
+        help='把本地文件上传到云盘指定目录（写操作，须用户确认）',
+        description='上传本地文件到云盘指定目录；目标目录可为云盘路径（如 /LinuxDo）或目录 fileId，不存在时自动创建；缺省为当前会话默认保存目录',
     )
     p.add_argument('file_path', help='本地文件的绝对路径')
+    p.add_argument(
+        'target_dir',
+        nargs='?',
+        default=None,
+        help='目标云盘目录：云盘路径或目录 fileId，缺省为当前会话默认保存目录',
+    )
     p.add_argument(
         '--session',
         default=None,

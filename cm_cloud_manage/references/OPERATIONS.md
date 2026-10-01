@@ -15,7 +15,7 @@
 
 ## 命令速查
 
-- 上传文件：`python3 {baseDir}/scripts/main.py upload <file_path>` — 上传本地文件到会话默认保存目录
+- 上传文件：`python3 {baseDir}/scripts/main.py upload <file_path> [target_dir]` — 上传本地文件到云盘指定目录（云盘路径或目录 fileId，不存在自动创建；缺省为会话默认保存目录）
 - 下载文件：`python3 {baseDir}/scripts/main.py download <file_ids> <download_dir>` — 本地保存目录须已存在
 - 批量移动：`python3 {baseDir}/scripts/main.py batch_move <file_ids> <to_parent_file_id>` — 源文件与目标父目录均须在 `/AI空间/MClaw空间` 下；源在该空间外时跳过并在回执提示改用 batch_copy
 - 批量复制：`python3 {baseDir}/scripts/main.py batch_copy <file_ids> <to_parent_file_id>` — 目标父目录须在 `/AI空间/MClaw空间` 下，源文件不限所在目录；参数形态同 batch_move
