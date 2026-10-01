@@ -1,0 +1,21 @@
+# 登录会话与凭证（真实凭据，永不提交）
+common_auth/session.json
+session.json
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+
+# 运行日志与本地数据
+workspace/dynamic_log/
+*.log
+*.out.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
