@@ -24,4 +24,6 @@ from cli.semantic_search import run as run_semantic_search
 from cli.dynamic import run as run_dynamic
 from cli.search_transfer import run as run_search_transfer
 from cli.search_by_ids import run as run_search_by_ids
+from cli.share_save import run as run_share_save
+from cli.share_download import run as run_share_download
 from cli.upload import run as run_upload

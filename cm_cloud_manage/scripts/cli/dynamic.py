@@ -18,6 +18,7 @@ from cli.cli_runtime import (
     EXIT_OK,
 )
 from mclaw.shared.organize.search_fetch_store import EXIT_SEARCH_YIELDED
+from services.search.degraded import describe_backend_error
 from services.errors import CliValidationError, OperationServiceError
 from services.search.args import validate_dynamic
 from services.search.fetch_loop import run_search
@@ -69,7 +70,11 @@ def run(args: argparse.Namespace) -> int:
         )
         return EXIT_SEARCH_YIELDED
     except RuntimeError as exc:
-        error_meta(command, f'服务端错误：{exc}；请停止并交用户决策，勿自动重试')
+        _backend_hint = describe_backend_error(exc)
+        if _backend_hint:
+            error_meta(command, _backend_hint, code='BACKEND_DOWN', retryable=False)
+        else:
+            error_meta(command, f'服务端错误：{exc}；请停止并交用户决策，勿自动重试')
         return EXIT_BUSINESS_ERROR
     except Exception as exc:  # noqa: BLE001 兜底：任何未知异常都要给出可行动回执
         error_meta(command, f'内部错误：{type(exc).__name__}: {exc}；请停止并交用户决策')

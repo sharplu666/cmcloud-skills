@@ -40,6 +40,8 @@ from cli import (
     run_search_by_ids,
     run_search_transfer,
     run_semantic_search,
+    run_share_download,
+    run_share_save,
     run_upload,
     run_download,
 )
@@ -88,6 +90,23 @@ def handle_download(args):
     return run_download(
         parse_csv_file_ids(args.file_ids),
         args.download_dir,
+    )
+
+
+def handle_share_save(args):
+    return run_share_save(
+        args.share,
+        args.passwd,
+        args.target_dir,
+    )
+
+
+def handle_share_download(args):
+    return run_share_download(
+        args.share,
+        args.download_dir,
+        args.passwd,
+        args.target_dir,
     )
 
 
@@ -172,6 +191,8 @@ COMMAND_HANDLERS = {
     'dynamic': run_dynamic,
     'search-by-ids': run_search_by_ids,
     'search-transfer': run_search_transfer,
+    'share-save': handle_share_save,
+    'share-download': handle_share_download,
     'person-search': run_person_search,
     'play_media': run_play_media,
 }

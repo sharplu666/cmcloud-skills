@@ -1,5 +1,6 @@
 # 登录会话与凭证（真实凭据，永不提交）
 common_auth/session.json
+common_auth/sessions/
 session.json
 .env
 *.env

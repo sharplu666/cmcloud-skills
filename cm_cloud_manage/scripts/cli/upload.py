@@ -4,17 +4,23 @@
 from __future__ import annotations
 
 from cli.cli_runtime import (
+    Any,
     EXIT_INPUT_ERROR,
+    EXIT_INTERNAL_ERROR,
     EXIT_OK,
     Optional,
     api_file_complete,
     api_file_create,
     classify_upload_parent_path,
+    collect_deduped_file_path_entries,
     datetime,
+    emit_file_list_card,
+    emit_file_path_list_card,
     emit_jsonl,
     emit_write_file_record,
     ensure_default_session_upload_parent,
     exit_with_error,
+    get_enriched_files_by_ids,
     get_file_path_map,
     os,
     requests,
@@ -52,7 +58,8 @@ def _resolve_upload_parent(
 
         parts = split_cloud_dir_path(target)
         if not parts:
-            exit_with_error('上传失败：目标云盘目录不能为空', code=EXIT_INPUT_ERROR)
+            # 目标即根目录
+            return '/', '/', '已上传到指定路径'
         folder = ensure_folder_path_parts(parts, error_cls=RuntimeError)
         parent_file_id = str(folder.get('fileId') or '').strip()
         if not parent_file_id:
@@ -122,29 +129,33 @@ def run(
 
     snapshot_trace_id()
 
-    # 上传完成即视为成功：不再额外回查文件信息做确认
-    payload = {
-        'record': 'meta',
-        'status': 'success',
-        'command': 'upload',
-        'message': '上传成功',
-        'fileId': fid,
-        'fileName': name,
-        'fileSize': size,
-        'parentPath': parent_path,
-        'parentFileId': parent_file_id,
-        'targetKind': target_kind,
-    }
-    emit_jsonl(payload)
-    emit_write_file_record(
-        {
-            'fileId': fid,
-            'fileName': name,
-            'fileSize': size,
-            'actionType': 'upload',
-        },
-        index=1,
-        parent_file_id=parent_file_id,
-    )
+    try:
+        enriched = get_enriched_files_by_ids([fid])
+        if not enriched:
+            exit_with_error(f'上传失败，获取文件信息失败（文件ID: {fid}）')
+        path_entries = collect_deduped_file_path_entries(enriched)
+        payload = {
+            'record': 'meta',
+            'status': 'success',
+            'command': 'upload',
+            'message': '上传成功',
+            'parentPath': parent_path,
+            'parentFileId': parent_file_id,
+            'targetKind': target_kind,
+        }
+        if path_entries:
+            payload['filePathList'] = path_entries
+        emit_jsonl(payload)
+        file_rows: list[dict[str, Any]] = []
+        for idx, row in enumerate(enriched, start=1):
+            row['actionType'] = 'upload'
+            file_rows.append(emit_write_file_record(row, index=idx))
+        emit_file_list_card(file_rows, total=len(file_rows), search=False, cli='upload')
+        if path_entries:
+            emit_file_path_list_card(path_entries, cli='upload')
+    except RuntimeError as e:
+        exit_with_error(str(e))
+    except Exception as e:
+        exit_with_error(f'上传失败: {e}', code=EXIT_INTERNAL_ERROR)
 
     return EXIT_OK

@@ -28,6 +28,7 @@ from cli.cli_runtime import (
     EXIT_INTERNAL_ERROR,
     EXIT_OK,
 )
+from services.search.degraded import describe_backend_error
 from services.errors import CliValidationError, OperationServiceError
 from services.search_by_ids import (
     FolderIdsRejected,
@@ -88,7 +89,11 @@ def run(args: argparse.Namespace) -> int:
         error_meta(command, exc.message, say=exc.say)
         return EXIT_BUSINESS_ERROR
     except RuntimeError as exc:
-        error_meta(command, f'服务端错误：{exc}；请停止并交用户决策，勿自动重试')
+        _backend_hint = describe_backend_error(exc)
+        if _backend_hint:
+            error_meta(command, _backend_hint, code='BACKEND_DOWN', retryable=False)
+        else:
+            error_meta(command, f'服务端错误：{exc}；请停止并交用户决策，勿自动重试')
         return EXIT_BUSINESS_ERROR
     except Exception as exc:  # noqa: BLE001 兜底：未预期异常走内部错误回执
         error_meta(command, f'内部错误：{type(exc).__name__}: {exc}')

@@ -51,6 +51,7 @@ EXIT_INTERNAL_ERROR = 3  # 未预期内部错误
 
 WRITE_COMMANDS = frozenset({
     'upload', 'batch_copy', 'batch_move', 'batch_rename', 'mkdir',
+    'share-save', 'share-download',
 })  # 写操作：需初始化 operation_log
 
 SEARCH_LIST_COMMANDS = frozenset({

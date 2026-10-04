@@ -24,6 +24,10 @@ def build_parser() -> argparse.ArgumentParser:
 上传:
   · upload <本地绝对路径> [目标云盘目录] 上传到指定云盘目录（缺省为当前会话默认保存目录）
 
+分享转存:
+  · share-save <分享链接或分享ID> [--passwd 提取码] [--target-dir 云盘目录] 转存分享文件到自己云盘
+  · share-download <分享链接或分享ID> <本地目录> [--passwd 提取码] [--target-dir 云盘目录] 转存并下载到本地
+
 mkdir：完整路径须以 /AI空间/MClaw空间 开头
 
 更多参数: python3 main.py <子命令> -h
@@ -61,6 +65,44 @@ mkdir：完整路径须以 /AI空间/MClaw空间 开头
     )
     p.add_argument('file_ids', help='要下载的文件 fileId，多个用英文逗号分隔')
     p.add_argument('download_dir', help='本地保存目录的绝对路径，须已存在')
+
+    p = sub.add_parser(
+        'share-save',
+        help='把 139 分享链接中的文件转存到自己云盘（写操作，须用户确认）',
+        description='解析 139 分享链接（自动识别文本中的提取码），把分享内的文件/文件夹'
+                    '转存到自己云盘指定目录；目标目录可为云盘路径（不存在自动创建）或目录 fileId，'
+                    '缺省为当前会话默认保存目录；转存为异步任务，命令内轮询等待落盘后返回 fileId',
+    )
+    p.add_argument('share', help='139 分享链接（可粘贴整段分享文本，自动识别提取码）或分享 ID')
+    p.add_argument(
+        '--passwd',
+        default=None,
+        help='分享提取码；不传时自动从分享文本中识别',
+    )
+    p.add_argument(
+        '--target-dir',
+        default=None,
+        help='转存目标云盘目录：云盘路径或目录 fileId，缺省为当前会话默认保存目录',
+    )
+
+    p = sub.add_parser(
+        'share-download',
+        help='把 139 分享链接中的文件转存到自己云盘再下载到本地（写操作，须用户确认）',
+        description='share-save + download 一步完成：先转存到自己云盘指定目录（缺省为当前会话'
+                    '默认保存目录），再按分享内的目录结构下载到本地目录',
+    )
+    p.add_argument('share', help='139 分享链接（可粘贴整段分享文本，自动识别提取码）或分享 ID')
+    p.add_argument('download_dir', help='本地保存目录的绝对路径，须已存在')
+    p.add_argument(
+        '--passwd',
+        default=None,
+        help='分享提取码；不传时自动从分享文本中识别',
+    )
+    p.add_argument(
+        '--target-dir',
+        default=None,
+        help='转存目标云盘目录：云盘路径或目录 fileId，缺省为当前会话默认保存目录',
+    )
 
     p = sub.add_parser(
         'batch_get',

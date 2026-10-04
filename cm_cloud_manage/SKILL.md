@@ -58,6 +58,13 @@ description: >
 
 - **上传文件**：上传到云盘指定目录
 - **下载文件**：下载云盘文件到本地目录
+- **分享转存**：把别人的 139 分享链接中的文件转存到自己云盘 → [SHARE-SAVE.md](./references/SHARE-SAVE.md)
+- **分享转存并下载**：转存后一步下载到本地（保留分享内目录结构）→ [SHARE-SAVE.md](./references/SHARE-SAVE.md)
+
+> **注意（2026-10-04 实测）**：`search` / `semantic-search` / `dynamic` / `person-search` / `search-by-ids` 所依赖的
+> 139 AI 搜索接口（ai.yun.139.com）已下线（404），`search-transfer` 的转存查询接口（huidu-middle）不可达；
+> 这些命令现会返回明确的降级提示与替代方案。文件原子操作（上传/下载/查详情/判存在/复制/移动/重命名/建目录）
+> 与 `share-save` / `share-download` 不受影响。
 - **批量移动/复制**：把一批文件移动/复制到云盘指定
 - **创建目录**：按完整云盘路径创建目录（含中间各级）
 - **重命名**：提供`<fileId>`，对一个或多个文件重命名
