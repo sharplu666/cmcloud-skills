@@ -9,7 +9,7 @@
 
 - `<file_ids>` 为 fileId CSV（逗号分隔）；`<file_path>` 为本地文件绝对路径。
 - `<to_parent_file_id>` 为目标文件夹 fileId。
-- `<dir_path>` 须以 `/AI空间/MClaw空间` 开头（代码强制，越权报错）。
+- `<dir_path>` 为云盘任意完整路径（含中间各级自动创建）。
 - `<download_dir>` 为本地绝对路径，须已存在（不存在报错）。
 - `batch_rename`/`batch_check_exists` 用 `fileId:newname` / `parentFileId:fileName` 对（前者 fileId+新名，后者 父目录ID+文件名），可空格分隔多个（check_exists 亦支持一项内英文逗号分隔），支持中/英文冒号。
 
@@ -17,10 +17,10 @@
 
 - 上传文件：`python3 {baseDir}/scripts/main.py upload <file_path> [target_dir]` — 上传本地文件到云盘指定目录（云盘路径或目录 fileId，不存在自动创建；缺省为会话默认保存目录）
 - 下载文件：`python3 {baseDir}/scripts/main.py download <file_ids> <download_dir>` — 本地保存目录须已存在
-- 批量移动：`python3 {baseDir}/scripts/main.py batch_move <file_ids> <to_parent_file_id>` — 源文件与目标父目录均须在 `/AI空间/MClaw空间` 下；源在该空间外时跳过并在回执提示改用 batch_copy
-- 批量复制：`python3 {baseDir}/scripts/main.py batch_copy <file_ids> <to_parent_file_id>` — 目标父目录须在 `/AI空间/MClaw空间` 下，源文件不限所在目录；参数形态同 batch_move
-- 创建目录：`python3 {baseDir}/scripts/main.py mkdir <dir_path>` — 含中间各级自动创建；同级已有去空格同名目录则复用不新建
-- 重命名：`python3 {baseDir}/scripts/main.py batch_rename <fileId:newname> ...` — 一个或多个，单次最多 100 条
+- 批量移动：`python3 {baseDir}/scripts/main.py batch_move <file_ids> <to_parent_file_id>` — 源文件与目标父目录可为云盘任意有权限访问的位置
+- 批量复制：`python3 {baseDir}/scripts/main.py batch_copy <file_ids> <to_parent_file_id>` — 目标父目录可为云盘任意有权限访问的位置；参数形态同 batch_move
+- 创建目录：`python3 {baseDir}/scripts/main.py mkdir <dir_path>` — 云盘任意完整路径，含中间各级自动创建；同级已有去空格同名目录则复用不新建
+- 重命名：`python3 {baseDir}/scripts/main.py batch_rename <fileId:newname> ...` — 一个或多个，单次最多 100 条；直接原地改名
 - 创建默认保存目录：`python3 {baseDir}/scripts/main.py create_default_save_dir` — 创建或确保会话默认保存目录存在
 - 查询默认保存目录：`python3 {baseDir}/scripts/main.py get_default_save_dir` — 只查询不创建
 - 按 ID 查详情：`python3 {baseDir}/scripts/main.py batch_get <file_ids>` — 查文件元数据

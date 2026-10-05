@@ -8,11 +8,11 @@ from cli.cli_runtime import (
     EXIT_INPUT_ERROR,
     EXIT_OK,
     emit_jsonl,
-    ensure_mclaw_dir_path,
     exit_with_error,
     get_single_file_path,
     snapshot_trace_id,
 )
+from mclaw.shared.cm_cloud.folder_ops import ensure_folder_path_parts
 from mclaw.shared.postprocess.paths import join_cloud_dir_path, split_cloud_dir_path
 
 def _mkdir_result_message(
@@ -52,7 +52,7 @@ def run(dir_path: str) -> int:
     try:
         parts = split_cloud_dir_path(raw_path)
         requested_path = join_cloud_dir_path(parts)
-        folder = ensure_mclaw_dir_path(raw_path, error_cls=RuntimeError)
+        folder = ensure_folder_path_parts(parts, error_cls=RuntimeError)
         segment_actions = list(folder.pop('_segmentActions', []) or [])
         created_file_id = str(folder.get('fileId') or '').strip()
         if not created_file_id:

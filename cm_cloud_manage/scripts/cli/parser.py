@@ -28,8 +28,6 @@ def build_parser() -> argparse.ArgumentParser:
   · share-save <分享链接或分享ID> [--passwd 提取码] [--target-dir 云盘目录] 转存分享文件到自己云盘
   · share-download <分享链接或分享ID> <本地目录> [--passwd 提取码] [--target-dir 云盘目录] 转存并下载到本地
 
-mkdir：完整路径须以 /AI空间/MClaw空间 开头
-
 更多参数: python3 main.py <子命令> -h
 """
     root = CliArgumentParser(
@@ -146,37 +144,36 @@ mkdir：完整路径须以 /AI空间/MClaw空间 开头
     p = sub.add_parser(
         'batch_copy',
         help='批量复制文件到目标文件夹（写操作，须用户确认）',
-        description='异步任务；目标父目录须在 /AI空间/MClaw空间 下，源文件不限所在目录；'
+        description='异步任务；源文件与目标父目录均可为云盘中任意有权限访问的位置；'
                     '单次最多 30 个文件，超出请改用「云盘文件管理」整理流程',
     )
     p.add_argument('file_ids', help='待复制文件的 fileId，多个用英文逗号分隔')
-    p.add_argument('to_parent_file_id', help='目标父目录 fileId；须在 /AI空间/MClaw空间 下')
+    p.add_argument('to_parent_file_id', help='目标父目录 fileId')
     p.add_argument('session', nargs='?', default='', help=argparse.SUPPRESS)
 
     p = sub.add_parser(
         'batch_move',
         help='批量移动文件到目标文件夹（写操作，须用户确认）',
         description=(
-            '异步任务；源文件与目标父目录均须在 /AI空间/MClaw空间 下。'
-            '源文件在该空间外时会跳过并提示改用 batch_copy；'
+            '异步任务；源文件与目标父目录均可为云盘中任意有权限访问的位置。'
             '单次最多 30 个文件，超出请改用「云盘文件管理」整理流程'
         ),
     )
     p.add_argument('file_ids', help='待移动文件的 fileId，多个用英文逗号分隔')
-    p.add_argument('to_parent_file_id', help='目标父目录 fileId；须在 /AI空间/MClaw空间 下')
+    p.add_argument('to_parent_file_id', help='目标父目录 fileId')
     p.add_argument('session', nargs='?', default='', help=argparse.SUPPRESS)
 
     p = sub.add_parser(
         'mkdir',
         help='按完整云盘路径创建目录（写操作，须用户确认）',
         description=(
-            '仅接受完整路径，须以 /AI空间/MClaw空间 开头；'
+            '仅接受完整路径，云盘任意位置均可创建；'
             '逐级 ensure，段名含空格时若同级存在去空格同名目录则复用不新建'
         ),
     )
     p.add_argument(
         'dir_path',
-        help='完整云盘目录路径，如 /AI空间/MClaw空间/合同/2026',
+        help='完整云盘目录路径，如 /合同/2026',
     )
 
     p = sub.add_parser(

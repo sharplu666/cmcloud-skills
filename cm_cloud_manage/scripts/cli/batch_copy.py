@@ -8,7 +8,6 @@ from cli.cli_runtime import (
     EXIT_BUSINESS_ERROR,
     EXIT_INPUT_ERROR,
     EXIT_OK,
-    MCLAW_ALLOWED_DIR,
     append_operation_log,
     collect_deduped_file_path_entries,
     collect_success_result_file_ids,
@@ -20,7 +19,6 @@ from cli.cli_runtime import (
     get_enriched_files_by_ids,
     get_single_file_info,
     get_single_file_path,
-    is_under_ai_space,
     os,
     snapshot_trace_id,
 )
@@ -48,14 +46,6 @@ def run(
         if target_type not in ('folder', '2') and target_category != 'folder':
             exit_with_error(
                 f'批量复制失败：to_parent_file_id={normalized_target_parent_file_id} 不是文件夹',
-                code=EXIT_INPUT_ERROR,
-                from_api=False,
-            )
-
-        if not is_under_ai_space(normalized_target_parent_file_id):
-            exit_with_error(
-                f'批量复制失败：本技能仅允许复制到「{MCLAW_ALLOWED_DIR}」，'
-                f'无法在云盘其它位置执行复制（to_parent_file_id: {normalized_target_parent_file_id}）',
                 code=EXIT_INPUT_ERROR,
                 from_api=False,
             )

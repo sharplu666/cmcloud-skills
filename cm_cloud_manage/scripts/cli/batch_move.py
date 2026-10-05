@@ -8,10 +8,7 @@ from cli.cli_runtime import (
     EXIT_BUSINESS_ERROR,
     EXIT_INPUT_ERROR,
     EXIT_OK,
-    MCLAW_ALLOWED_DIR,
-    MOVE_SKIP_OUTSIDE_MCLAW_PREFIX,
     append_operation_log,
-    batch_is_under_ai_space,
     collect_deduped_file_path_entries,
     collect_success_result_file_ids,
     deque,
@@ -23,30 +20,10 @@ from cli.cli_runtime import (
     get_enriched_files_by_ids,
     get_single_file_info,
     get_single_file_path,
-    is_under_ai_space,
     os,
-    resolve_current_session,
     snapshot_trace_id,
 )
 from services.atomic.batch_ops import batch_move_to_parent_file_id
-
-def move_skip_outside_mclaw_message() -> str:
-    return (
-        f'{MOVE_SKIP_OUTSIDE_MCLAW_PREFIX}。'
-        '源文件在 MClaw 空间外时不能移动；若需保留原文件并落到目标目录，'
-        '请向用户说明后改用 batch_copy（file_ids、to_parent_file_id、session 与本次移动相同）。'
-    )
-
-def build_batch_copy_suggested_action(
-    file_ids: list[str],
-    to_parent_file_id: str,
-    session: str = '',
-) -> str:
-    # session 参数兼容保留；建议命令中的 session 占位取自环境变量（缺省用占位符满足位置参数）
-    _ = session
-    ids = ','.join(str(fid).strip() for fid in file_ids if str(fid).strip())
-    sess = resolve_current_session(required=False) or 'ignored'
-    return f'batch_copy {ids} {to_parent_file_id} {sess}'.strip()
 
 
 def run(
@@ -75,20 +52,10 @@ def run(
                 from_api=False,
             )
 
-        if not is_under_ai_space(normalized_target_parent_file_id):
-            exit_with_error(
-                f'批量移动失败：本技能仅允许在「{MCLAW_ALLOWED_DIR}」内移动，'
-                f'无法在云盘其它位置执行移动（to_parent_file_id: {normalized_target_parent_file_id}）。'
-                f'请将目标目录改为该空间内的文件夹 fileId；'
-                f'若源文件在该空间外、仅需复制到目标目录，可改用 batch_copy。',
-                code=EXIT_INPUT_ERROR,
-                from_api=False,
-            )
-
         target_path = get_single_file_path(normalized_target_parent_file_id, action='移动文件')
-        ai_space_status_map = batch_is_under_ai_space(normalized_file_ids)
-        movable_file_ids = [fid for fid in normalized_file_ids if ai_space_status_map.get(fid, False)]
-        skipped_file_ids = [fid for fid in normalized_file_ids if not ai_space_status_map.get(fid, False)]
+
+        # 路径限制已移除：源文件与目标目录可在云盘任意位置
+        movable_file_ids = list(normalized_file_ids)
 
         moved_rows_by_file_id: dict[str, deque] = {}
         if movable_file_ids:
@@ -105,16 +72,6 @@ def run(
 
         rows = []
         for fid in normalized_file_ids:
-            if not ai_space_status_map.get(fid, False):
-                rows.append({
-                    'errCode': 'SKIPPED',
-                    'message': move_skip_outside_mclaw_message(),
-                    'oldFileId': fid,
-                    'fileId': fid,
-                    'newFileId': '',
-                })
-                continue
-
             row_queue = moved_rows_by_file_id.get(fid)
             if row_queue:
                 rows.append(row_queue.popleft())
@@ -132,24 +89,13 @@ def run(
     snapshot_trace_id()
 
     ok_count = sum(1 for row in rows if str(row.get('errCode') or '') == '0000')
-    skipped_count = sum(1 for row in rows if str(row.get('errCode') or '') == 'SKIPPED')
-    fail_count = len(rows) - ok_count - skipped_count
-    is_success = fail_count == 0 and skipped_count == 0
+    fail_count = len(rows) - ok_count
+    is_success = fail_count == 0
     status = 'success' if is_success else ('error' if ok_count == 0 else 'warning')
     if is_success:
         message = '批量移动成功'
-    elif ok_count == 0 and fail_count == 0:
-        message = (
-            f'批量移动失败：{skipped_count} 个文件不在「{MCLAW_ALLOWED_DIR}」内，无移动权限。'
-            '请向用户说明后改用 batch_copy 复制到目标目录。'
-        )
     else:
         message = '批量移动失败' if ok_count == 0 else '批量移动部分成功'
-        if skipped_count:
-            message += (
-                f'；{skipped_count} 个文件无移动权限已跳过，'
-                '可改用 batch_copy 复制到同一目标目录'
-            )
     moved_file_ids = [
         str(row.get('newFileId') or '').strip()
         for row in rows
@@ -188,35 +134,7 @@ def run(
     }
     if path_entries:
         meta_payload['filePathList'] = path_entries
-    if skipped_count:
-        meta_payload['skippedCount'] = skipped_count
-        meta_payload['skippedFileIds'] = skipped_file_ids
-        meta_payload['skippedReason'] = 'source_outside_mclaw_space'
-        meta_payload['suggestedAction'] = build_batch_copy_suggested_action(
-            skipped_file_ids,
-            normalized_target_parent_file_id,
-            session,
-        )
-        meta_payload['hint'] = (
-            f'共 {skipped_count} 个源文件不在「{MCLAW_ALLOWED_DIR}」内，无法移动。'
-            '若用户需要保留原文件并落到目标目录，请说明无移动权限后执行 suggestedAction 中的 batch_copy。'
-        )
     emit_jsonl(meta_payload)
-
-    for skip_idx, fid in enumerate(skipped_file_ids, start=1):
-        emit_jsonl({
-            'record': 'hint',
-            'index': skip_idx,
-            'command': 'batch_move',
-            'status': 'skipped',
-            'fileId': fid,
-            'message': move_skip_outside_mclaw_message(),
-            'suggestedAction': build_batch_copy_suggested_action(
-                [fid],
-                normalized_target_parent_file_id,
-                session,
-            ),
-        })
 
     emit_move_copy_write_records(
         ordered,

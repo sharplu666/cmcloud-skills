@@ -9,11 +9,9 @@ from cli.cli_runtime import (
     EXIT_BUSINESS_ERROR,
     EXIT_INPUT_ERROR,
     EXIT_OK,
-    MclawEnvError,
     Optional,
     api_batch_file_update,
     append_operation_log,
-    batch_is_under_ai_space,
     collect_deduped_file_path_entries,
     emit_file_list_card,
     emit_file_path_list_card,
@@ -27,13 +25,9 @@ from cli.cli_runtime import (
     normalize_rename_target_name,
     os,
     post_operation_file_id_from_batch_update,
-    resolve_current_session,
     snapshot_trace_id,
 )
-from services.atomic.batch_ops import (
-    _append_folder_children_logs,
-    _copy_into_ai_space,
-)
+from services.atomic.batch_ops import _append_folder_children_logs
 
 def parse_batch_rename_spec(token: str) -> tuple[str, str]:
     t = token.strip()
@@ -60,34 +54,8 @@ def run(
     pre_failed: dict[str, dict[str, str]] = {}  # original_file_id -> {newName, message}
     original_name_map = {fid: name for fid, name in pairs}  # 保留原始名称用于失败输出
 
-    ai_space_status_map = batch_is_under_ai_space(file_ids)
-    file_ids_to_copy = [fid for fid in file_ids if not ai_space_status_map.get(fid, False)]
-
-    raw_session_id = ''
-    if file_ids_to_copy:
-        # 空间外文件须复制到默认会话目录：env 缺失或非法均应明确报错
-        try:
-            raw_session_id = resolve_current_session(required=True)
-        except MclawEnvError as e:
-            exit_with_error(str(e), code=EXIT_INPUT_ERROR)
-
+    # 路径限制已移除：直接在原位置重命名，不再把空间外文件复制进 AI 空间
     effective_file_id_map = {fid: fid for fid in file_ids}
-
-    if file_ids_to_copy:
-        copied_id_map, copy_failures = _copy_into_ai_space(
-            file_ids_to_copy,
-            raw_session_id=raw_session_id,
-            command='batch_rename.copy_files',
-            messages={
-                'exc': '复制失败：{detail}',
-                'failed': '复制到 AI 空间结果文件目录失败：{detail}',
-                'missing': '复制到 AI 空间结果文件目录后未返回新 fileId',
-                'empty': '复制返回空结果',
-            },
-        )
-        for fid, msg in copy_failures.items():
-            pre_failed[fid] = {'newName': original_name_map.get(fid, ''), 'message': msg}
-        effective_file_id_map.update(copied_id_map)
 
     # 建立 effective → original 反向映射，用于将后续失败归因到原始 fileId
     original_of: dict[str, str] = {}
@@ -110,58 +78,6 @@ def run(
             pre_failed[orig_fid] = {'newName': original_name_map.get(orig_fid, ''), 'message': f'fileId 不存在：{fid}'}
         effective_pairs = [(fid, name) for fid, name in effective_pairs if fid not in missing]
         effective_file_ids = list(dict.fromkeys(fid for fid, _ in effective_pairs))
-
-    if effective_file_ids:
-        effective_ai_space_status_map = batch_is_under_ai_space(effective_file_ids)
-        disallowed_effective_file_ids = [
-            fid for fid in effective_file_ids
-            if not effective_ai_space_status_map.get(fid, False)
-        ]
-    else:
-        disallowed_effective_file_ids = []
-
-    if disallowed_effective_file_ids:
-        if not raw_session_id:
-            try:
-                raw_session_id = resolve_current_session(required=True)
-            except MclawEnvError as e:
-                exit_with_error(str(e), code=EXIT_INPUT_ERROR)
-        fallback_id_map, fallback_failures = _copy_into_ai_space(
-            disallowed_effective_file_ids,
-            raw_session_id=raw_session_id,
-            command='batch_rename.fallback_copy',
-            messages={
-                'exc': '二次复制失败：{detail}',
-                'failed': '二次复制失败：{detail}',
-                'missing': '二次复制后未返回新 fileId',
-                'empty': '二次复制返回空结果',
-            },
-        )
-        for fid, msg in fallback_failures.items():
-            orig_fid = original_of.get(fid, fid)
-            pre_failed[orig_fid] = {'newName': original_name_map.get(orig_fid, ''), 'message': msg}
-
-        # 二次复制成功的项用新 fileId 改写；未成功的从待改名集合移除（已计入 pre_failed），
-        # 避免仍在 AI 空间外的文件被就地改名。
-        updated_pairs = []
-        for fid, name in effective_pairs:
-            if fid in fallback_id_map:
-                new_fid = fallback_id_map[fid]
-                original_of[new_fid] = original_of.get(fid, fid)
-                updated_pairs.append((new_fid, name))
-            elif fid not in disallowed_effective_file_ids:
-                updated_pairs.append((fid, name))
-        effective_pairs = updated_pairs
-        effective_file_ids = list(dict.fromkeys(fid for fid, _ in effective_pairs))
-
-        info_map = get_file_info_map(effective_file_ids) if effective_file_ids else {}
-        missing = [fid for fid in effective_file_ids if fid not in info_map]
-        if missing:
-            for fid in missing:
-                orig_fid = original_of.get(fid, fid)
-                pre_failed[orig_fid] = {'newName': original_name_map.get(orig_fid, ''), 'message': f'fileId 不存在：{fid}'}
-            effective_pairs = [(fid, name) for fid, name in effective_pairs if fid not in missing]
-            effective_file_ids = list(dict.fromkeys(fid for fid, _ in effective_pairs))
 
     parent_file_ids = [str((info_map.get(fid) or {}).get('parentFileId') or '').strip() or '/' for fid in effective_file_ids]
     parent_path_map = get_file_path_map(parent_file_ids, action='批量重命名')

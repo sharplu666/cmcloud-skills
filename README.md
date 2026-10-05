@@ -113,7 +113,7 @@ python image_tool/image_edit_save/scripts/main.py convert --input <a.heic,b.livp
 
 | 操作类型 | 路径限制 |
 |---|---|
-| **写入**（上传 / 移动 / 新建 / 整理落位） | 仅限 `/AI空间/<CM_CLOUD_APP_NAME>` 及其子路径 |
+| **写入**（上传 / 移动 / 新建 / 整理落位） | 上传、移动、复制、建目录、重命名：云盘任意有权限访问的目录；整理落位固定在 `/AI空间/<CM_CLOUD_APP_NAME>` 空间内 |
 | **只读**（搜索 / 浏览 / 详情 / 下载） | 无限制 |
 
 ## 六、运行前检查清单
